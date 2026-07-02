@@ -1,0 +1,154 @@
+{
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "jsx": "preserve",
+    "allowSyntheticDefaultImports": true,
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
+    "paths": {
+      "#imports": [
+        "./types/nitro-imports"
+      ],
+      "~/*": [
+        "../*"
+      ],
+      "@/*": [
+        "../*"
+      ],
+      "~~/*": [
+        "../*"
+      ],
+      "@@/*": [
+        "../*"
+      ],
+      "nuxt": [
+        "../node_modules/.pnpm/nuxt@4.4.8_@babel+plugin-pr_12e180c290d6d55b6bf74d5eb4b7d41c/node_modules/nuxt"
+      ],
+      "@unhead/vue": [
+        "../node_modules/.pnpm/@unhead+vue@2.1.15_vue@3.5.38_typescript@6.0.3_/node_modules/@unhead/vue"
+      ],
+      "@nuxt/devtools": [
+        "../node_modules/.pnpm/@nuxt+devtools@3.2.4_vite@8_63e8509730cddbbd0936c57fe19a840e/node_modules/@nuxt/devtools"
+      ],
+      "@vue/runtime-core": [
+        "../../node_modules/@vue/runtime-core"
+      ],
+      "@vue/compiler-sfc": [
+        "../../node_modules/@vue/compiler-sfc"
+      ],
+      "@nuxt/schema": [
+        "../node_modules/.pnpm/@nuxt+schema@4.4.8/node_modules/@nuxt/schema"
+      ],
+      "@nuxt/icon": [
+        "../node_modules/.pnpm/@nuxt+icon@2.2.3_magicast@0_074244cffed2ee9eb2f46ecf015ccced/node_modules/@nuxt/icon"
+      ],
+      "@nuxt/fonts": [
+        "../node_modules/.pnpm/@nuxt+fonts@0.14.0_db0@0.3._b84cc4662e93670cfd25a424110fadc6/node_modules/@nuxt/fonts"
+      ],
+      "@nuxtjs/color-mode": [
+        "../node_modules/.pnpm/@nuxtjs+color-mode@4.0.1_magicast@0.5.3/node_modules/@nuxtjs/color-mode"
+      ],
+      "defu": [
+        "../node_modules/.pnpm/defu@6.1.7/node_modules/defu"
+      ],
+      "h3": [
+        "../node_modules/.pnpm/h3@1.15.11/node_modules/h3"
+      ],
+      "consola": [
+        "../node_modules/.pnpm/consola@3.4.2/node_modules/consola"
+      ],
+      "ofetch": [
+        "../node_modules/.pnpm/ofetch@1.5.1/node_modules/ofetch"
+      ],
+      "crossws": [
+        "../node_modules/.pnpm/crossws@0.3.5/node_modules/crossws"
+      ],
+      "nitropack": [
+        "../node_modules/.pnpm/nitropack@2.13.4_oxc-parser@0.133.0_rolldown@1.0.3/node_modules/nitropack"
+      ],
+      "nitropack/types": [
+        "../node_modules/.pnpm/nitropack@2.13.4_oxc-parser@0.133.0_rolldown@1.0.3/node_modules/nitropack/types"
+      ],
+      "nitropack/runtime": [
+        "../node_modules/.pnpm/nitropack@2.13.4_oxc-parser@0.133.0_rolldown@1.0.3/node_modules/nitropack/runtime"
+      ],
+      "#shared": [
+        "../shared"
+      ],
+      "#shared/*": [
+        "../shared/*"
+      ],
+      "#server": [
+        "../server"
+      ],
+      "#server/*": [
+        "../server/*"
+      ],
+      "#build": [
+        "./"
+      ],
+      "#build/*": [
+        "./*"
+      ],
+      "#internal/nuxt/paths": [
+        "../node_modules/.pnpm/@nuxt+nitro-server@4.4.8_@b_2d3cefc1048f440e36392215503bfc09/node_modules/@nuxt/nitro-server/dist/runtime/utils/paths"
+      ],
+      "#ui": [
+        "../node_modules/.pnpm/@nuxt+ui@4.9.0_0c61aa8d0aac9c35d87536818b7d7dd4/node_modules/@nuxt/ui/dist/runtime"
+      ],
+      "#ui/*": [
+        "../node_modules/.pnpm/@nuxt+ui@4.9.0_0c61aa8d0aac9c35d87536818b7d7dd4/node_modules/@nuxt/ui/dist/runtime/*"
+      ],
+      "#unhead/composables": [
+        "../node_modules/.pnpm/nuxt@4.4.8_@babel+plugin-pr_12e180c290d6d55b6bf74d5eb4b7d41c/node_modules/nuxt/dist/head/runtime/composables"
+      ],
+      "#nuxt-icon-server-bundle": [
+        "./nuxt-icon-server-bundle"
+      ]
+    },
+    "lib": [
+      "esnext",
+      "webworker",
+      "dom.iterable"
+    ],
+    "noUncheckedIndexedAccess": true,
+    "allowArbitraryExtensions": true
+  },
+  "include": [
+    "./types/nitro-nuxt.d.ts",
+    "../node_modules/.pnpm/@nuxt+ui@4.9.0_0c61aa8d0aac9c35d87536818b7d7dd4/node_modules/runtime/server",
+    "../node_modules/.pnpm/@nuxt+ui@4.9.0_0c61aa8d0aac9c35d87536818b7d7dd4/node_modules/dist/runtime/server",
+    "../node_modules/.pnpm/@nuxt+devtools@3.2.4_vite@8_63e8509730cddbbd0936c57fe19a840e/node_modules/runtime/server",
+    "../node_modules/.pnpm/@nuxt+devtools@3.2.4_vite@8_63e8509730cddbbd0936c57fe19a840e/node_modules/dist/runtime/server",
+    "../node_modules/.pnpm/@nuxt+telemetry@2.8.0_@nuxt+kit@4.4.8_magicast@0.5.3_/node_modules/runtime/server",
+    "../node_modules/.pnpm/@nuxt+telemetry@2.8.0_@nuxt+kit@4.4.8_magicast@0.5.3_/node_modules/dist/runtime/server",
+    "../node_modules/.pnpm/@nuxt+icon@2.2.3_magicast@0_074244cffed2ee9eb2f46ecf015ccced/node_modules/runtime/server",
+    "../node_modules/.pnpm/@nuxt+icon@2.2.3_magicast@0_074244cffed2ee9eb2f46ecf015ccced/node_modules/dist/runtime/server",
+    "../node_modules/.pnpm/@nuxt+fonts@0.14.0_db0@0.3._b84cc4662e93670cfd25a424110fadc6/node_modules/runtime/server",
+    "../node_modules/.pnpm/@nuxt+fonts@0.14.0_db0@0.3._b84cc4662e93670cfd25a424110fadc6/node_modules/dist/runtime/server",
+    "../node_modules/.pnpm/@nuxtjs+color-mode@4.0.1_magicast@0.5.3/node_modules/runtime/server",
+    "../node_modules/.pnpm/@nuxtjs+color-mode@4.0.1_magicast@0.5.3/node_modules/dist/runtime/server",
+    "../server/**/*",
+    "../shared/**/*.d.ts",
+    "./types/nitro.d.ts"
+  ],
+  "exclude": [
+    "../node_modules",
+    "../node_modules/.pnpm/nuxt@4.4.8_@babel+plugin-pr_12e180c290d6d55b6bf74d5eb4b7d41c/node_modules/nuxt/node_modules",
+    "../node_modules/.pnpm/@nuxt+ui@4.9.0_0c61aa8d0aac9c35d87536818b7d7dd4/node_modules/@nuxt/ui/node_modules",
+    "../node_modules/.pnpm/@nuxt+devtools@3.2.4_vite@8_63e8509730cddbbd0936c57fe19a840e/node_modules/@nuxt/devtools/node_modules",
+    "../node_modules/.pnpm/@nuxt+telemetry@2.8.0_@nuxt+kit@4.4.8_magicast@0.5.3_/node_modules/@nuxt/telemetry/node_modules",
+    "../node_modules/.pnpm/@nuxt+icon@2.2.3_magicast@0_074244cffed2ee9eb2f46ecf015ccced/node_modules/@nuxt/icon/node_modules",
+    "../node_modules/.pnpm/@nuxt+fonts@0.14.0_db0@0.3._b84cc4662e93670cfd25a424110fadc6/node_modules/@nuxt/fonts/node_modules",
+    "../node_modules/.pnpm/@nuxtjs+color-mode@4.0.1_magicast@0.5.3/node_modules/@nuxtjs/color-mode/node_modules",
+    "../dist"
+  ]
+}
