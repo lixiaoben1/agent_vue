@@ -11,7 +11,7 @@ import { visualizer } from 'rollup-plugin-visualizer'
 export default defineConfig({
   plugins: [
     vue(),
-    vueDevTools(),
+    // vueDevTools(),
     tailwindcss(),
     // visualizer({
     //   open: true,           // 构建完成后自动在浏览器打开报告

@@ -1,27 +1,12 @@
-# agent_vue
+# agent_vue前端 + Chatgpt + 液态玻璃样式
 
-This template should help get you started developing with Vue 3 in Vite.
+前端页面，基于Vue3+vite，页面参考Chatgpt ios版，融合了液态玻璃，响应式布局，预留后端请求接口，包含axios请求历史记录，
+以及使用SSE流式数据传输
 
-## Recommended IDE Setup
-
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
+<div>
+  <img src="./readme_image/img_01.png" alt="电脑版" height="300" style="max-width:510px; margin: 0 1%; vertical-align: middle;">
+  <img src="./readme_image/img_02.png" alt="手机版" height="300" style="margin: 0 1%; vertical-align: middle;">
+</div>
 
 ## Project Setup
 

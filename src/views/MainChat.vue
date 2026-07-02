@@ -67,4 +67,11 @@ const currentConversationId = computed(() => {
     transform: scale(1.2);
   }
 }
+
+.my-gradient-disappear-to-bottom {
+  background: linear-gradient(to bottom, rgba(255,255,255,0.8), rgba(255,255,255,0));
+}
+.my-gradient-disappear-to-top {
+  background: linear-gradient(to top, rgba(255,255,255,0.8), rgba(255,255,255,0));
+}
 </style>
