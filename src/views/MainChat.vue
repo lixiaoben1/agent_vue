@@ -30,7 +30,7 @@ const currentConversationId = computed(() => {
     </div>
     <div class="absolute top-0 w-full h-20 my-gradient-disappear-to-bottom z-1"></div>
     <div v-if="!currentConversationId" class="absolute bottom-[60%] left-0 right-0 w-full flex justify-center text-2xl">准备好了，随时开始！</div>
-    <div :class="currentConversationId ? 'bottom-10' : 'bottom-[50%]'" class="absolute left-0 right-0 w-full flex justify-center z-2" >
+    <div :class="currentConversationId ? 'bottom-10' : 'bottom-[50%]'" class="absolute left-0 right-0 w-full flex flex-col items-center justify-center pl-5 pr-7.5 z-2" >
       <ChatBox></ChatBox>
     </div>
     <div v-show="currentConversationId && !isBottom" @click="chatWindowRef?.scrollToBottom" class="absolute bottom-30 rounded-full w-8 h-8 liquid-glass flex justify-center items-center cursor-pointer">

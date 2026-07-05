@@ -3,18 +3,20 @@ import Textarea from 'primevue/textarea';
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {streamChat} from "@/api/chat.ts";
-import axios from "axios";
+import { v4 as uuidv4 } from 'uuid';
 import {useChatStore} from "@/stores/chat_store.ts";
-import {useUserStore} from "@/stores/user_store.ts";
+import {useConversationStore} from "@/stores/conversation_store.js";
 import {useVerifyStore} from "@/stores/verify.ts";
 import UploadFile from "@/components/main_chat/UploadFile.vue";
-
-const userStore = useUserStore()
+import Button from 'primevue/button';
+const conversationStore = useConversationStore()
 const route = useRoute()
 const router = useRouter()
 const store = useChatStore()
 const verifyStore = useVerifyStore()
-const input = ref('')
+const input = ref("")
+const chat_action = ref<"chat"|"resume">("chat")
+const resume_value = ref<string>("")
 
 //需要创建对话时候生成uuid，之后只允许读取url的uuid
 
@@ -30,10 +32,10 @@ async function sendMessage() {
   }
   let conversationId = route.params.uuid as string
   if (!conversationId) {
-    userStore.appendNewConversation({conversation_id:conversationId,summary_content: content})
+    conversationStore.appendNewConversation({conversation_id:conversationId,summary_content: content})
   }
   if (!route.params.uuid) {
-    conversationId = crypto.randomUUID()
+    conversationId = uuidv4()
     console.log("uuid—conversation id不存在正在创建", conversationId)
     await router.replace({
       name: 'Chat',
@@ -47,12 +49,16 @@ async function sendMessage() {
       content
   )
 
-  store.createAiPlaceholder(
-      conversationId)
+  store.createAiPlaceholder(conversationId)
+
   try {
     await streamChat(
         conversationId,
+        verifyStore.username,
+         verifyStore.user_id,
         content,
+        "chat",
+        resume_value.value,
         (chunk) => {
           store.appendAiChunk(
               conversationId,
@@ -79,13 +85,53 @@ const handleToggle = (event:PointerEvent) => {
   childRef.value.toggle(event)
 }
 
+const human_in_loop = async (decision: 'reject' | 'approve') => {
+  let conversationId = route.params.uuid as string
+  conversationStore.human_in_the_loop.need_human_in_the_loop = false
+  try {
+    await streamChat(
+        conversationId,
+        verifyStore.username,
+        verifyStore.user_id,
+        "resume",
+        "resume",
+        decision,
+        (chunk) => {
+          store.appendAiChunk(
+              conversationId,
+              chunk
+          )},
+        () => {
+          store.finishAiMessage(
+              conversationId
+          )},
+        () => {
+          store.failAiMessage(
+              conversationId
+          )}
+    )
+  } catch {
+    store.failAiMessage(
+        conversationId
+    )}
+}
+
 
 
 </script>
 
 <template>
-
-    <div class="ml-5 mr-7.5 w-full max-w-3xl liquid-glass flex items-center justify-between">
+    <div v-if="conversationStore.human_in_the_loop.need_human_in_the_loop" class="bottom-15 bg-white w-full max-w-3xl rounded-2xl h-25 mb-2 px-5 flex flex-row items-center justify-evenly">
+      <div class="w-full h-20 flex flex-col justify-center items-start">收到一个人机交互事件需要你确定
+        <br />
+        工具{{conversationStore.human_in_the_loop.tool_name}}发来了一条授权请求：{{conversationStore.human_in_the_loop.tool_description}}
+      </div>
+      <div class="w-25 flex flex-col justify-between h-20">
+        <Button @click="human_in_loop('reject')" severity="danger" variant="outlined" class="h-9">reject</Button>
+        <Button @click="human_in_loop('approve')" severity="success" variant="outlined" class="h-9">approve</Button>
+      </div>
+    </div>
+    <div class="w-full max-w-3xl liquid-glass flex items-center justify-between">
       <div @click="handleToggle" class="m-2 shrink-0 flex flex-row self-end items-center justify-center rounded-full w-10 h-10 hover:bg-[#aaaaaa] active:bg-[#aaaaaa] cursor-pointer">
         <i class="text-[1.3rem]! pi pi-plus"></i>
         <UploadFile ref="childRef"></UploadFile>
@@ -116,6 +162,7 @@ const handleToggle = (event:PointerEvent) => {
   backdrop-filter: blur(18px) saturate(1.2);
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
   box-shadow:
+      0 5px 32px rgba(0, 0, 0, 0.12),
       0 5px 10px rgba(0, 0, 0, 0.1),
       inset -10px -1px 1px rgba(255, 255, 255, 0.55);
   border-radius: 30px; /* Added base border radius */

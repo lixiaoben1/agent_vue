@@ -19,6 +19,7 @@ const contentText = computed(() => props.content || '')
 const reasoningText = computed(() => {
   if (!props.reasoning) return ''
   // 仅处理引用块格式，不包含 content
+  // console.log(props.reasoning)
   return props.reasoning
 })
 

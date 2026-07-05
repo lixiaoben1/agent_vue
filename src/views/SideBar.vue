@@ -24,7 +24,7 @@ provide("SIDEBAR_KEY", {
     <div class="flex flex-row h-screen w-full overflow-hidden relative">
       <aside :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
              class="fixed left-0 top-0 w-[16rem] md:flex md:translate-x-0 z-55 h-full border-r border-surface-200 flex-col justify-between
-              dark:border-surface-700 bg-[#f6f6f8] transition-transform duration-300 ease-in-out">
+              dark:border-surface-700 bg-[#f9f9f9] transition-transform duration-300 ease-in-out">
         <Logo class="p-3"></Logo>
         <HistoryListBox></HistoryListBox>
         <BottomSetting></BottomSetting>

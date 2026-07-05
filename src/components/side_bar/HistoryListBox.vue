@@ -6,16 +6,16 @@ import router from "@/router";
 const verifyStore = useVerifyStore()
 import type {ResponseConversationIdInterface} from "@/interface/response-interface.ts";
 import axios from "axios";
-import {useUserStore} from "@/stores/user_store.ts";
+import {useConversationStore} from "@/stores/conversation_store.js";
 import {storeToRefs} from "pinia";
 import type {MenuItemCommandEvent} from "primevue/menuitem";
 
-const userStore = useUserStore()
-const { selectedItem, conversation_id_list } = storeToRefs(userStore)
+const conversationStore = useConversationStore()
+const { selectedItem, conversation_id_list } = storeToRefs(conversationStore)
 
 
 onMounted(()=>{
-  userStore.fetch_history_list()
+  conversationStore.fetch_history_list()
 })
 
 const handleNewChat = async () => {
@@ -24,7 +24,7 @@ const handleNewChat = async () => {
   router.replace({ name: 'Chat' });
 };
 
-watch(() => userStore.selectedItem, (newUuid) => {
+watch(() => conversationStore.selectedItem, (newUuid) => {
   if (newUuid) {
     console.log("历史记录box已经检测到用户切换聊天会话了")
     router.replace({ name: 'Chat', params: { uuid: newUuid } })
@@ -62,7 +62,7 @@ watch(() => verifyStore.isVerified,
         router.replace('/chat')
       }else {
         console.log("验证结果似乎发生了变化")
-        userStore.fetch_history_list()
+        conversationStore.fetch_history_list()
       }
 
     },
@@ -75,7 +75,7 @@ watch(() => verifyStore.isVerified,
   <div class="flex flex-col w-full h-full text-[1rem]">
     <div @click="handleNewChat" class="w-full h-12 mt-3 pl-1 pr-2 flex flex-row items-center border-b border-surface-200 rounded-lg hover:bg-gray-200 cursor-pointer">
       <i class="pl-2 text-[1.0rem]! pi pi-pen-to-square"></i>
-      <span  class="ml-2">新建对话</span>
+      <span  class="ml-2 text-[0.9rem]">新建对话</span>
     </div>
     <div class="flex items-center w-full pl-3 mt-3 text-sm text-gray-400">最近</div>
     <Menu ref="menu" id="overlay_menu" :model="items" :popup="true" :pt="{
@@ -92,7 +92,7 @@ watch(() => verifyStore.isVerified,
                     // optionGroup :{class: 'text-[1rem] text-black font-bold pl-2'},
                       }">
       <template #option="slotProps">
-          <div class="truncate w-[90%] min-w-0 text-[0.95rem] ">
+          <div class="truncate w-[90%] min-w-0 text-[0.90rem] ">
             {{ slotProps.option.summary_content }}
             <span @click.stop="toggle($event,slotProps.option.conversation_id)" class="absolute -translate-y-1/2 top-1/2 flex justify-center items-center right-2
             w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-gray-300"><i class="text-[0.7rem]! pi pi-ellipsis-h"></i></span>

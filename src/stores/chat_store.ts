@@ -7,6 +7,7 @@ import router from "@/router";
 import { ref, toRaw } from "vue"
 import axios from "axios";
 import {useVerifyStore} from "@/stores/verify.ts";
+import { v4 as uuidv4 } from 'uuid';
 const verifyStore = useVerifyStore()
 export interface ChatMessage {
   id: string
@@ -40,7 +41,7 @@ export const useChatStore = defineStore('chat', () => {
     initConversation(conversationId)
 
     messages.value[conversationId]?.push({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       role: 'HumanMessage',
       conversation_id: conversationId,
       content,
@@ -59,10 +60,11 @@ export const useChatStore = defineStore('chat', () => {
     initConversation(conversationId)
 
     const aiMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       role: 'AiMessage',
       conversation_id: conversationId,
       content: '',
+      reasoning: '',
       created_at: new Date().toISOString(),
       status: 'streaming'
     }
@@ -141,7 +143,7 @@ export const useChatStore = defineStore('chat', () => {
     }
     if (loadedIds.value.has(conversationId)) return
 
-    // 🆕 2. IndexedDB 命中，恢复到内存并标记已加载
+    // IndexedDB 命中，恢复到内存并标记已加载
     try {
       const cached = await get<ChatMessage[]>(`chat:${conversationId}`)
       if (cached && cached.length > 0) {
@@ -151,10 +153,10 @@ export const useChatStore = defineStore('chat', () => {
         return
       }
     } catch (e) {
-      console.warn('IndexedDB 读取失败，降级到网络请求', e) // 🆕 无痕模式等场景兜底
+      console.warn('IndexedDB 读取失败，降级到网络请求', e)
     }
 
-    // 🆕 3. 都未命中，走原始网络请求
+    // 都未命中，走原始网络请求
 
     try {
       const res = await axios.post(`/api/request_history`, { conversation_id: conversationId });
@@ -163,12 +165,12 @@ export const useChatStore = defineStore('chat', () => {
         console.log(`[History] conversationId=${conversationId} 返回数据为空或格式异常，跳过本次更新`, res.data)
       return
       }
-      // ✅ 只有成功拿到数据（含新对话的空数组）才会执行以下三步
+      // 只有成功拿到数据（含新对话的空数组）才会执行以下三步
       messages.value[conversationId] = res.data;
       loadedIds.value.add(conversationId);
       saveToCache(conversationId);
     } catch (error: any) {
-      // 🆕 新建对话必然 404，视为正常空状态，静默处理
+      //新建对话必然 404，视为正常空状态，静默处理
       if (error.response?.status === 404) {
         console.log(`💬 [${conversationId}] 新对话或无历史记录`);
         return;

@@ -39,7 +39,7 @@ defineExpose({toggle})
 </script>
 
 <template>
-  <Popover ref="op">
+  <Popover class="popover_component" ref="op">
     <div class="max-w-md mx-auto">
       <FileUpload
           ref="fu"
@@ -93,6 +93,12 @@ defineExpose({toggle})
   </Popover>
 </template>
 
-<style scoped>
+<style>
+.popover_component::before {
+  display: none !important;
+}
 
+.popover_component::after {
+  display: none !important;
+}
 </style>

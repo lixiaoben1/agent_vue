@@ -72,13 +72,7 @@ function streamScrollToBottom() {
 
 const debouncedScroll = useThrottleFn(streamScrollToBottom, 200)
 
-//
-// onMounted(() => {
-//
-//   bindIsAtBottom()
-//
-// })
-
+// 滚动事件
 watch(messages, () => {
       if (!autoScroll.value) return
       debouncedScroll()

@@ -11,7 +11,7 @@ interface VerifyResponse {
 
 export const useVerifyStore = defineStore('verify', () => {
   const visible = ref(false);
-  const username = ref<string>('');
+  const username = ref<string>('需要登陆');
   const user_id = ref<string>('');
   const password = ref<string>('');
   const isVerified = ref(false);
@@ -37,9 +37,8 @@ export const useVerifyStore = defineStore('verify', () => {
 
   return {visible, requireVerify,verify, username,password,user_id,isVerified,logout};
 }, {
-  // ✅ 只需声明配置，无需手写 watch/read
   persist: {
-    storage: sessionStorage,       // 指定为 sessionStorage
+    storage: sessionStorage,
     pick: ['username', 'user_id', 'isVerified'],
   }
 });
