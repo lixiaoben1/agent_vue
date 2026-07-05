@@ -9,6 +9,9 @@ import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    cssMinify: 'esbuild',
+  },
   plugins: [
     vue(),
     // vueDevTools(),
@@ -29,7 +32,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000', // 👈 真实后端地址+端口
+        target: 'http://100.92.208.69:8000', // 👈 真实后端地址+端口
         changeOrigin: true,
         // rewrite: (path) => path.replace(/^\/api/, ''), // 如果后端没有 /api 前缀则取消注释
       }
