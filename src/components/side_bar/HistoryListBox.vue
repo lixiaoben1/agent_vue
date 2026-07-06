@@ -12,7 +12,9 @@ import type {MenuItemCommandEvent} from "primevue/menuitem";
 
 const conversationStore = useConversationStore()
 const { selectedItem, conversation_id_list } = storeToRefs(conversationStore)
+import { useToast } from 'primevue/usetoast';
 
+const toast = useToast();
 
 onMounted(()=>{
   conversationStore.fetch_history_list()
@@ -32,6 +34,7 @@ watch(() => conversationStore.selectedItem, (newUuid) => {
 })
 
 const deleteConversation = () => {
+  toast.add({ severity: 'error', summary: '无删除权限', detail: '该测试用户无法删除记录', life: 3000 })
   console.log('删除:', activeId.value);
 };
 
