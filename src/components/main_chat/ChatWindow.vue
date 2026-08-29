@@ -33,6 +33,28 @@ watch(
     { immediate: true }
 )
 
+/**
+ * 切回标签页时与服务端核对一次。
+ *
+ * 用户在流式输出期间切走，回来时那一轮很可能已经在后端落库了 ——
+ * 但这个页面的 SSE 连接可能早就断了，它自己不会知道。
+ */
+const onVisibilityChange = () => {
+  if (document.visibilityState !== 'visible') return
+  const id = currentConversationId.value
+  if (id) chatStore.revalidate(id)
+}
+
+onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  // 不清的话组件销毁后等待定时器还在发请求
+  chatStore.stopPendingRechecks()
+})
+
 const listRef = ref<any>()
 const autoScroll = ref(true)
 

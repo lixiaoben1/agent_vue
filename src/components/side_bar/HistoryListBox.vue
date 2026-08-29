@@ -3,9 +3,11 @@ import Menu from 'primevue/menu';
 import Listbox from "primevue/listbox";
 import { ref, watch,onMounted } from "vue";import {useVerifyStore} from "@/stores/verify.ts";
 import router from "@/router";
+import { useRoute } from "vue-router";
 const verifyStore = useVerifyStore()
+const route = useRoute()
 import type {ResponseConversationIdInterface} from "@/interface/response-interface.ts";
-import axios from "axios";
+import http from "@/api/http";
 import {useConversationStore} from "@/stores/conversation_store.js";
 import {storeToRefs} from "pinia";
 import type {MenuItemCommandEvent} from "primevue/menuitem";
@@ -33,9 +35,39 @@ watch(() => conversationStore.selectedItem, (newUuid) => {
   }
 })
 
-const deleteConversation = () => {
-  toast.add({ severity: 'error', summary: '无删除权限', detail: '该测试用户无法删除记录', life: 3000 })
-  console.log('删除:', activeId.value);
+/**
+ * 删除会话。
+ *
+ * 原先这里是个占位实现，只弹「该测试用户无法删除记录」——后端从来没有
+ * 可用的删除接口。现在 DELETE /api/conversations/{id} 已经就绪，
+ * 并且会校验归属（删别人的会话返回 404）。
+ *
+ * 后端会连带清理 LangGraph 的 checkpointer 状态，前端不用管那一步。
+ */
+const deleteConversation = async () => {
+  const id = activeId.value
+  if (!id) return
+
+  try {
+    await http.delete(`/api/conversations/${id}`)
+    conversationStore.removeConversation(id)
+    toast.add({ severity: 'success', summary: '已删除', life: 2000 })
+
+    // 删的正是当前打开的会话时要跳走，否则界面还停在一个已经不存在的
+    // 会话上，下一次刷新历史会得到 404
+    if (route.params.uuid === id) {
+      await router.replace('/chat')
+    }
+  } catch (error: any) {
+    const status = error?.response?.status
+    toast.add({
+      severity: 'error',
+      summary: '删除失败',
+      detail: status === 404 ? '会话不存在' : '请稍后重试',
+      life: 3000,
+    })
+    console.error('删除会话失败:', error)
+  }
 };
 
 const menu = ref();
