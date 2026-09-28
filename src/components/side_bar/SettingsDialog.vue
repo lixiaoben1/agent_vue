@@ -232,7 +232,7 @@ const handleClearSessionFiles = () => {
   >
     <TabView style="min-height: 28rem;">
       <!-- 账户标签 -->
-      <TabPanel header="账户">
+      <TabPanel value="account" header="账户">
         <div class="flex flex-col gap-4">
           <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
             <i class="pi pi-user text-3xl text-blue-500"></i>
@@ -260,7 +260,7 @@ const handleClearSessionFiles = () => {
       </TabPanel>
 
       <!-- 对话管理标签 -->
-      <TabPanel header="对话管理">
+      <TabPanel value="conversations" header="对话管理">
         <div class="flex flex-col gap-3">
           <div class="text-sm text-gray-600 mb-2">
             管理您的对话历史和会话内容
@@ -285,7 +285,7 @@ const handleClearSessionFiles = () => {
       </TabPanel>
 
       <!-- 显示设置标签 -->
-      <TabPanel header="显示">
+      <TabPanel value="display" header="显示">
         <div class="flex flex-col gap-4">
           <div class="flex items-center justify-between">
             <div>
@@ -321,7 +321,7 @@ const handleClearSessionFiles = () => {
       </TabPanel>
 
       <!-- 文件管理标签 -->
-      <TabPanel header="文件">
+      <TabPanel value="files" header="文件">
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between mb-2">
             <div class="text-sm text-gray-600">
@@ -378,7 +378,7 @@ const handleClearSessionFiles = () => {
       </TabPanel>
 
       <!-- 关于标签 -->
-      <TabPanel header="关于">
+      <TabPanel value="about" header="关于">
         <div class="flex flex-col gap-4">
           <div class="text-center mb-4">
             <i class="pi pi-comment text-6xl text-blue-500 mb-3"></i>
