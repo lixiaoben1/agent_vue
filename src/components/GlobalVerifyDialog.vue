@@ -11,8 +11,8 @@ const toast = useToast();
 const verify_store = useVerifyStore()
 
 const mode = ref<'login' | 'register'>('login')
-const username = ref<string>("")
-const password = ref<string>("")
+const username = ref<string>("lixiaoben")
+const password = ref<string>("123456")
 const inviteKey = ref<string>("")
 const errorMsg = ref<string>("")
 const submitting = ref(false)
