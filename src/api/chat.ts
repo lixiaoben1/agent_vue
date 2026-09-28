@@ -77,7 +77,18 @@ export async function streamChat(
   ) => void,
   onFinish: (done?: ChatDone) => void,
   onError: (err: any) => void,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  /**
+   * 本轮引用的上传文件（ingest_task_record 的 task_id）。
+   *
+   * 后端据此从 session_document 取出解析好的文本，拼进这一轮的提示词。
+   * 只发 id 不发内容：文档可能有几十万字，而后端已经有解析结果 ——
+   * 前端再传一遍是白跑一趟带宽，也会让用户消息里出现他没打过的内容。
+   *
+   * 这些 id 不是凭据：后端取文档时会同时匹配 JWT 里的 user_id，
+   * 拿别人的 task_id 过来什么也读不到。
+   */
+  attachmentTaskIds?: string[]
 ) {
   let textBuffer = ''
   let reasoningBuffer = ''
@@ -138,7 +149,8 @@ export async function streamChat(
       conversation_id: conversationId,
       content: message,
       chat_action: chat_action,
-      resume_value: resume_value
+      resume_value: resume_value,
+      attachment_task_ids: attachmentTaskIds ?? []
     }),
     async onopen(response) {
       if (response.ok) {

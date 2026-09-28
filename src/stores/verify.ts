@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import http, { clearToken, getToken, setToken } from '@/api/http';
 
 /**
@@ -16,6 +16,14 @@ interface LoginResponse {
   token: string;
   user_id: string;
   user_name: string;
+  /**
+   * USER 或 ADMIN。
+   *
+   * 只用来决定要不要显示管理入口，**不是权限**。把它改成 ADMIN 也只是
+   * 让自己多看到一个按钮 —— 每个管理接口都会由后端 AdminGuard 现查
+   * 数据库拦下来，非管理员一律 404。
+   */
+  role: string;
   expires_in_minutes: number;
 }
 
@@ -25,6 +33,9 @@ export const useVerifyStore = defineStore('verify', () => {
   const user_id = ref<string>('');
   const password = ref<string>('');
   const isVerified = ref(false);
+  /** 见 LoginResponse.role 的注释：只控制入口可见性，不是权限。 */
+  const role = ref<string>('USER');
+  const isAdmin = computed(() => role.value === 'ADMIN');
 
   function requireVerify() {
     visible.value = true;
@@ -41,11 +52,36 @@ export const useVerifyStore = defineStore('verify', () => {
       user_name: name,
       password: pwd,
     });
+    return applySession(result.data);
+  }
 
-    const data = result.data;
+  /**
+   * 凭邀请码注册。成功后直接就是登录态 —— 后端注册接口会一并签发 token，
+   * 让用户注册完还要再手工登录一次是多余的一步。
+   *
+   * 失败抛 axios 错误（400），调用方在 catch 里按 message 提示：
+   * 用户名被占、邀请码无效/已用/已过期/已作废，这几种原因对用户意味着
+   * 不同的下一步，所以后端是分开给文案的。
+   */
+  async function register(
+    name: string,
+    pwd: string,
+    inviteKey: string,
+  ): Promise<LoginResponse> {
+    const result = await http.post<LoginResponse>('/api/auth/register', {
+      user_name: name,
+      password: pwd,
+      invite_key: inviteKey,
+    });
+    return applySession(result.data);
+  }
+
+  /** 登录与注册的成功路径完全相同，抽出来免得两处各写一遍漏掉某个字段。 */
+  function applySession(data: LoginResponse): LoginResponse {
     setToken(data.token);
     username.value = data.user_name;
     user_id.value = data.user_id;
+    role.value = data.role ?? 'USER';
     isVerified.value = true;
     visible.value = false;
     return data;
@@ -64,11 +100,14 @@ export const useVerifyStore = defineStore('verify', () => {
       return false;
     }
     try {
-      const result = await http.get<{ user_id: string; user_name: string }>(
-        '/api/auth/me',
-      );
+      const result = await http.get<{
+        user_id: string;
+        user_name: string;
+        role: string;
+      }>('/api/auth/me');
       username.value = result.data.user_name;
       user_id.value = result.data.user_id;
+      role.value = result.data.role ?? 'USER';
       isVerified.value = true;
       return true;
     } catch {
@@ -84,17 +123,23 @@ export const useVerifyStore = defineStore('verify', () => {
     username.value = '需要登陆';
     user_id.value = '';
     password.value = '';
+    // 角色必须一起清：留着 ADMIN 会让下一个在同一浏览器登录的普通用户
+    // 看到管理入口。他点进去会被后端 404 拦住，但那是个纯粹的困惑来源
+    role.value = 'USER';
   }
 
   return {
     visible,
     requireVerify,
     verify,
+    register,
     restoreSession,
     username,
     password,
     user_id,
     isVerified,
+    role,
+    isAdmin,
     logout,
   };
 }, {
@@ -103,6 +148,6 @@ export const useVerifyStore = defineStore('verify', () => {
     // token 不在这里持久化 —— 它由 api/http.ts 单独管理。
     // 放进 pinia 的持久化里会让它跟着 store 的结构变化走，
     // 而拦截器需要一个稳定的读取位置
-    pick: ['username', 'user_id', 'isVerified'],
+    pick: ['username', 'user_id', 'isVerified', 'role'],
   }
 });

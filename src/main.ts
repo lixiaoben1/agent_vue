@@ -8,8 +8,10 @@ import 'primeicons/primeicons.css'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import {MyPreset} from '@/theme/main.ts'
 import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
 import { setUnauthorizedHandler, getToken } from '@/api/http'
 import { useVerifyStore } from '@/stores/verify'
+import { useSettingsStore } from '@/stores/settings_store'
 
 const app = createApp(App);
 app.use(PrimeVue, {
@@ -30,6 +32,10 @@ pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 app.use(router)
 app.use(ToastService);
+// useConfirm() 取的是这个插件 provide 的实例。少了它，组件里
+// 调 useConfirm() 会直接抛 "No PrimeVue Confirmation provided!"
+// —— 在 setup 阶段抛，整个组件挂不上
+app.use(ConfirmationService);
 app.mount('#app')
 
 // 401 的统一处理接在这里，而不是在 api/http.ts 里直接 import store：
@@ -42,6 +48,10 @@ setUnauthorizedHandler(() => {
   verifyStore.logout()
   verifyStore.requireVerify()
 })
+
+// 加载显示设置并应用。必须在 mount 之后：操作 DOM。
+const settingsStore = useSettingsStore()
+settingsStore.loadSettings()
 
 /**
  * 进入页面时就确定身份状态，没有身份就直接弹登录框。

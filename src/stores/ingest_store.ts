@@ -11,6 +11,15 @@ export interface IngestTask {
   error_message: string | null
   created_at: string
   updated_at: string
+  /**
+   * 解析结果的去向。
+   *   SESSION 用户上传，只作本次对话的上下文，不进向量库
+   *   CORPUS  管理员导入的语料，进向量库，所有对话可检索
+   *
+   * 界面上两者的文案必须分开说 —— 把 SESSION 说成「已入知识库」
+   * 是对数据去向的错误承诺。
+   */
+  target?: 'SESSION' | 'CORPUS'
 }
 
 /** 到了这三个状态就不会再变，前端该停止轮询。 */

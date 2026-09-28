@@ -8,6 +8,10 @@ import { ref, toRaw } from "vue"
 import http from "@/api/http";
 import {useVerifyStore} from "@/stores/verify.ts";
 import { v4 as uuidv4 } from 'uuid';
+import type {
+  AttachmentStatus,
+  MessageAttachment,
+} from '@/interface/attachment-interface'
 export interface ChatMessage {
   id: string
   role: 'HumanMessage' | 'AiMessage'
@@ -16,6 +20,14 @@ export interface ChatMessage {
   content: string
   created_at: string
   status?: 'streaming' | 'complete' | 'error'
+  /**
+   * 随消息一起发出的附件。
+   *
+   * 只存在于本地：服务端的 conversation_history_record 没有附件列，
+   * 历史接口也不会回传它。所以 revalidate 时要把本地这份接回去 ——
+   * 否则与服务端核对一次，第一条带文件的消息上的附件就没了。
+   */
+  attachments?: MessageAttachment[]
 }
 
 /** 服务端 HistoryItemResponse 的形状。字段名与 ChatMessage 对不齐，需要归一化。 */
@@ -45,10 +57,16 @@ export const useChatStore = defineStore('chat', () => {
    * 原实现把响应直接赋给 messages，于是这些消息的 id 是 undefined ——
    * ChatWindow 用 id 做 v-for 的 key，虚拟列表会复用错节点，
    * 表现为滚动时消息内容串位。
+   *
+   * id **不能**用 message_id：那一列存的是 user_name（见 Java 侧
+   * ConversationHistoryRecord 的注释，列名与内容不符是历史遗留），
+   * 于是同一个用户的所有消息会拿到同一个 id —— 正是上面那段注释想避免的
+   * 串位问题，只是换了个成因。这里一律用 conversation + 轮次 + 角色 合成，
+   * 它在一个会话内唯一且稳定（同一轮的 human 与 ai 各一条）。
    */
   function normalize(items: HistoryItemResponse[], conversationId: string): ChatMessage[] {
     return items.map((item, index) => ({
-      id: item.message_id || `${conversationId}:${item.turn_index ?? index}:${item.role}`,
+      id: `${conversationId}:${item.turn_index ?? index}:${item.role}:${index}`,
       role: item.role,
       conversation_id: conversationId,
       content: item.content ?? '',
@@ -56,6 +74,40 @@ export const useChatStore = defineStore('chat', () => {
       created_at: item.created_at ?? new Date().toISOString(),
       status: 'complete' as const,
     }))
+  }
+
+  /**
+   * 把本地记着的附件接回服务端返回的消息上。
+   *
+   * 为什么需要这一步：附件信息只存在于前端（历史表没有附件列，
+   * 上传与对话是两条独立链路）。revalidate 是「服务端为准」地整体替换列表，
+   * 不接回去的话，与服务端核对一次之后，那条带文件的消息就只剩文字了 ——
+   * 而 revalidate 在每次进入会话时都会跑。
+   *
+   * 按「第几条用户消息」对应，不按内容或 id 匹配：服务端落库的 human_content
+   * 来自模型实际收到的输入，中间件压缩改写过历史时它与本地原文可能不一致，
+   * 按内容匹配会漏。而顺序是稳定的 —— 两侧都是同一串对话的同一个顺序。
+   */
+  function carryOverAttachments(
+    conversationId: string,
+    normalized: ChatMessage[],
+  ): ChatMessage[] {
+    const local = messages.value[conversationId]
+    if (!local?.length) return normalized
+
+    const localAttachments = local
+      .filter((msg) => msg.role === 'HumanMessage')
+      .map((msg) => msg.attachments)
+
+    let humanIndex = 0
+    for (const msg of normalized) {
+      if (msg.role !== 'HumanMessage') continue
+      const carried = localAttachments[humanIndex++]
+      if (carried?.length) {
+        msg.attachments = carried
+      }
+    }
+    return normalized
   }
 
   /**
@@ -103,7 +155,8 @@ export const useChatStore = defineStore('chat', () => {
    */
   function addHumanMessage(
     conversationId: string,
-    content: string
+    content: string,
+    attachments?: MessageAttachment[]
   ) {
     initConversation(conversationId)
 
@@ -113,9 +166,45 @@ export const useChatStore = defineStore('chat', () => {
       conversation_id: conversationId,
       content,
       created_at: new Date().toISOString(),
-      status: 'complete'
+      status: 'complete',
+      // 空数组不写：会让每条无附件的消息都多带一个字段进 IndexedDB，
+      // 也让模板里的 v-if 判断多一种情况
+      ...(attachments?.length ? { attachments } : {}),
     })
     saveToCache(conversationId)
+  }
+
+  /**
+   * 更新某个附件的解析状态，扫全部会话。
+   *
+   * 扫全部而不是只扫当前会话：用户发完消息就切走是很常见的，
+   * 而解析要几分钟 —— 那条消息上的 chip 该在他切回来时显示正确状态。
+   * task_id 是 UUID，跨会话不会撞。
+   *
+   * 由 composer store 的 ingest 监听调用。
+   */
+  function updateAttachmentStatus(
+    taskId: string,
+    status: AttachmentStatus,
+    errorMessage?: string,
+  ) {
+    for (const [conversationId, list] of Object.entries(messages.value)) {
+      let touched = false
+      for (const msg of list ?? []) {
+        for (const attachment of msg.attachments ?? []) {
+          if (attachment.task_id !== taskId) continue
+          if (attachment.status === status && attachment.error_message === errorMessage) {
+            continue
+          }
+          attachment.status = status
+          attachment.error_message = errorMessage
+          touched = true
+        }
+      }
+      // 只有真的变了才写盘：这个函数由一个 deep watch 驱动，
+      // 每次轮询回来都会调一遍，无条件写盘等于每 3 秒一次无谓的 IndexedDB 写入
+      if (touched) saveToCache(conversationId)
+    }
   }
 
   /**
@@ -276,7 +365,11 @@ export const useChatStore = defineStore('chat', () => {
       // 流式输出可能在 await 期间开始了，此时不能覆盖
       if (streamingIds.value.has(conversationId)) return
 
-      messages.value[conversationId] = normalize(res.data, conversationId)
+      // 附件只存在于本地，替换列表前先把它们记下来接回去
+      messages.value[conversationId] = carryOverAttachments(
+        conversationId,
+        normalize(res.data, conversationId),
+      )
       loadedIds.value.add(conversationId)
       saveToCache(conversationId)
       console.log(`✅ [${conversationId}] 已与服务端同步，共 ${res.data.length} 条`)
@@ -361,6 +454,8 @@ export const useChatStore = defineStore('chat', () => {
     initConversation,
 
     addHumanMessage,
+
+    updateAttachmentStatus,
 
     createAiPlaceholder,
 

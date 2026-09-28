@@ -1,121 +1,112 @@
 <script setup lang="ts">
-import Popover from 'primevue/popover';
-import { computed, onUnmounted, ref } from "vue";
-import Message from 'primevue/message';
-import Button from 'primevue/button';
-import FileUpload from 'primevue/fileupload';
-import type { FileUploadUploadEvent, FileUploadErrorEvent } from 'primevue/fileupload';
-import { useToast } from 'primevue/usetoast';
-import { getToken } from "@/api/http";
-import { useIngestStore, type IngestTask } from "@/stores/ingest_store";
+/**
+ * 上传面板。
+ *
+ * === 为什么不再用 PrimeVue 的 FileUpload ===
+ *
+ * Popover 的插槽内容在 v-if 里，面板一关整棵子树卸载。FileUpload 把已选
+ * 文件列表和上传用的 XMLHttpRequest 都存在自己的组件实例上，于是「点空白处
+ * 关掉面板」就把它们一起销毁了 —— 重新打开是个空面板，用户无从判断文件
+ * 传上去了没有。这正是要修的问题，而它是内置组件的结构决定的，
+ * 靠传 prop 改不掉。
+ *
+ * 现在文件状态全在 composer store 里，本组件只是那份状态的一个视图：
+ * 关掉面板不影响任何在途上传，重新打开看到的还是同一份进度。
+ * 拖拽和选择文件这两件事本身很简单，一个 input[type=file] 加三个
+ * drag 事件就够了。
+ */
+import Popover from 'primevue/popover'
+import Button from 'primevue/button'
+import { computed, ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
+import { useComposerStore } from '@/stores/composer_store'
+import { useIngestStore, type IngestTask } from '@/stores/ingest_store'
+import AttachmentChip from '@/components/main_chat/AttachmentChip.vue'
 
 const toast = useToast()
+const composer = useComposerStore()
 const ingestStore = useIngestStore()
+
 const op = ref()
+const fileInput = ref<HTMLInputElement>()
+const isDragOver = ref(false)
+
+const accept = computed(() =>
+  composer.ALLOWED_EXTENSIONS.map((ext) => `.${ext}`).join(','),
+)
+
+function openPicker() {
+  fileInput.value?.click()
+}
 
 /**
- * FileUpload 内部用自己的 XMLHttpRequest，不走 axios，所以拦截器加不上
- * Authorization 头 —— 必须在这里显式传。少了它上传一律 401。
+ * 交给 store，把被拒绝的文件汇总成提示。
  *
- * 用 computed 而不是常量：token 会在重新登录后变化，
- * 取一次存住会让重登后的第一次上传仍然用旧 token。
+ * 每个被拒文件弹一条 toast 会在用户一次选了十个不合法文件时刷屏，
+ * 合成一条。
  */
-const uploadHeaders = computed(() => ({
-  Authorization: `Bearer ${getToken()}`,
-}))
+function handleFiles(files: FileList | null) {
+  if (!files?.length) return
 
-const toggle = (event:PointerEvent) => {
-  op.value.toggle(event);
+  const rejected = composer.addFiles(Array.from(files))
+  if (rejected.length) {
+    toast.add({
+      severity: 'warn',
+      summary: '部分文件未加入',
+      detail: rejected.map((item) => `${item.name}：${item.reason}`).join('\n'),
+      life: 5000,
+    })
+  }
 }
 
-const fu = ref();
+function onPick(event: Event) {
+  const input = event.target as HTMLInputElement
+  handleFiles(input.files)
+  // 清空 value：不清的话连续选同一个文件不会触发 change 事件，
+  // 表现为「移除后再选同一个文件没反应」
+  input.value = ''
+}
 
-const onChoose = () => {
-  fu.value.choose();
-};
-
-const onUpload = () => {
-  fu.value.upload();
-};
-
-const onClear = () => {
-  fu.value.clear();
-};
+function onDrop(event: DragEvent) {
+  isDragOver.value = false
+  handleFiles(event.dataTransfer?.files ?? null)
+}
 
 /**
- * 上传成功。注意「上传成功」不等于「解析完成」。
+ * 历史解析任务。与待发送区是两回事：这里是这个用户过去传过的东西，
+ * 用来回答「我上次那个文件到底入库了没有」。
  *
- * 后端只是把文件落了盘、写了一行 PENDING 任务、投进了队列就返回 ——
- * 解析要几分钟，由 Python 消费者异步做。所以这里把 task_id 交给
- * ingest store 去轮询进度，而不是直接告诉用户「已入库」。
+ * 排掉正在待发送区里的那些，否则同一个文件在面板里出现两次。
  */
-const onUploadDone = (event: FileUploadUploadEvent) => {
-  let tasks: Array<{ task_id: string; file_name: string; status: string }> = []
-  try {
-    tasks = JSON.parse(event.xhr.responseText)
-  } catch {
-    toast.add({ severity: 'warn', summary: '响应解析失败', life: 3000 })
-    return
-  }
-
-  const duplicates = tasks.filter((t) => t.status === 'DUPLICATE')
-  const queued = tasks.filter((t) => t.status !== 'DUPLICATE')
-
-  queued.forEach((task) => ingestStore.track(task.task_id, task.file_name))
-
-  if (queued.length) {
-    toast.add({
-      severity: 'info',
-      summary: '已加入解析队列',
-      detail: `${queued.length} 个文件正在后台解析，可能需要几分钟`,
-      life: 4000,
-    })
-  }
-  if (duplicates.length) {
-    toast.add({
-      severity: 'info',
-      summary: '已跳过重复文件',
-      detail: `${duplicates.length} 个文件此前已入库`,
-      life: 4000,
-    })
-  }
-  onClear()
-}
-
-const onUploadError = (event: FileUploadErrorEvent) => {
-  let detail = '请稍后重试'
-  try {
-    detail = JSON.parse(event.xhr.responseText)?.message ?? detail
-  } catch {
-    // 错误体不是 JSON（比如 nginx 返回的 413 页面），用默认文案
-  }
-  toast.add({ severity: 'error', summary: '上传失败', detail, life: 5000 })
-}
-
-const formatSize = (bytes:number) => {
-  if (bytes === 0) return '0 B';
-
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-};
-
-const trackedTasks = computed(() => Object.values(ingestStore.tasks))
+const historyTasks = computed(() => {
+  const pendingTaskIds = new Set(
+    composer.attachments.map((item) => item.task_id).filter(Boolean),
+  )
+  return Object.values(ingestStore.tasks).filter(
+    (task) => !pendingTaskIds.has(task.task_id),
+  )
+})
 
 const isTerminal = (task: IngestTask) =>
-    ['SUCCESS', 'FAILED', 'DUPLICATE'].includes(task.status)
+  ['SUCCESS', 'FAILED', 'DUPLICATE'].includes(task.status)
 
-/** 状态文案。直接显示 PENDING/RUNNING 这些字面量用户看不懂。 */
+/**
+ * 状态文案。SESSION 与 CORPUS 两种去向的说法必须分开 ——
+ * 用户上传的文件（SESSION）不进知识库，只在那一次对话里可用；
+ * 只有管理员导入的语料（CORPUS）才是「已入知识库，所有对话可检索」。
+ * 都写「已入库」会让用户以为自己的文件进了共享检索库。
+ */
 const statusLabel = (task: IngestTask) => {
+  const isCorpus = task.target === 'CORPUS'
   switch (task.status) {
     case 'PENDING':
       return '排队中，等待显存资源'
     case 'RUNNING':
       return '正在解析'
     case 'SUCCESS':
-      return `已入库，共 ${task.chunk_count ?? 0} 个片段`
+      return isCorpus
+        ? `已入知识库，共 ${task.chunk_count ?? 0} 个片段`
+        : `已解析，共 ${task.chunk_count ?? 0} 字`
     case 'DUPLICATE':
       return '此前已入库，已跳过'
     case 'FAILED':
@@ -125,113 +116,120 @@ const statusLabel = (task: IngestTask) => {
   }
 }
 
-// 打开面板时拉一次列表：用户可能刷新过页面，之前的轮询定时器
-// 已经随页面消失，未完成的任务要在这里接着轮
+/**
+ * 打开面板时拉一次列表：用户可能刷新过页面，之前的轮询定时器
+ * 已经随页面消失，未完成的任务要在这里接着轮。
+ */
 const toggleAndRefresh = (event: PointerEvent) => {
   ingestStore.fetchTasks()
   op.value.toggle(event)
 }
 
-onUnmounted(() => {
-  // 不清的话组件销毁后定时器还在发请求
-  ingestStore.stopAll()
-})
+/*
+ * 这里刻意不再有 onUnmounted → ingestStore.stopAll()。
+ *
+ * 原实现有那一句，而本组件会随 Popover 的开合反复卸载 —— 于是「关掉面板」
+ * 顺手停掉了所有解析任务的轮询。表现是：关掉面板再打开，任务永远停在
+ * 「排队中」，直到用户刷新页面。轮询的生命周期属于 store，不该由一个
+ * 会被反复销毁的视图来终止。
+ */
 
-defineExpose({toggle: toggleAndRefresh})
-
+defineExpose({ toggle: toggleAndRefresh })
 </script>
 
 <template>
   <Popover class="popover_component" ref="op">
-    <div class="max-w-md mx-auto">
-      <!--
-        三处改动，原值都是 PrimeVue 示例代码残留：
+    <div class="w-80 sm:w-96">
+      <input
+        ref="fileInput"
+        type="file"
+        multiple
+        :accept="accept"
+        class="hidden"
+        @change="onPick"
+      />
 
-        name="demo[]"     → "files"，与后端 @RequestParam("files") 对应。
-                            名字不匹配后端收不到文件，报的是「未收到任何文件」
-        accept="image/*"  → 实际支持的文本类型。后端只做文本解析，
-                            不走 OCR，收图片会在解析阶段才失败
-        maxFileSize 1MB   → 50MB，与后端 MAX_UPLOAD_SIZE_MB 一致。
-                            前端限制小于后端只是让用户早点知道；
-                            反过来（前端宽松）会让请求白跑一趟拿 413
-      -->
-      <FileUpload
-          ref="fu"
-          name="files"
-          url="/api/upload"
-          :multiple="true"
-          accept=".txt,.pdf,.md,.docx"
-          :maxFileSize="52428800"
-          :headers="uploadHeaders"
-          mode="advanced"
-          @upload="onUploadDone"
-          @error="onUploadError"
-          :pt="{ root: { class: 'border-0! bg-transparent!' }, header: { class: 'hidden!' }, content: { class: 'border-2! border-dashed! border-surface-200! dark:border-surface-700! rounded-xl! p-8!' } }"
+      <div
+        class="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed cursor-pointer transition-colors"
+        :class="isDragOver
+          ? 'border-blue-400 bg-blue-50'
+          : 'border-surface-200 dark:border-surface-700 hover:border-blue-300'"
+        @click="openPicker"
+        @dragenter.prevent="isDragOver = true"
+        @dragover.prevent="isDragOver = true"
+        @dragleave.prevent="isDragOver = false"
+        @drop.prevent="onDrop"
       >
-        <template #content="{ files, removeFileCallback, messages }">
-          <div v-if="messages?.length" class="flex flex-col gap-2">
-            <Message v-for="msg of messages" :key="msg" severity="error">{{ msg }}</Message>
-          </div>
-          <div v-if="files.length" class="flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-muted-color">{{ files.length }} file(s) selected</span>
-              <div class="flex items-center gap-2">
-                <Button variant="text" size="small" @click="onUpload">Upload</Button>
-                <Button variant="text" size="small" severity="danger" @click="onClear">Clear all</Button>
-              </div>
-            </div>
-            <div class="flex flex-col gap-2">
-              <div v-for="(file, index) of files" :key="file.name + file.size" class="flex items-center justify-between p-3 rounded-lg bg-surface-50 dark:bg-surface-800">
-                <div class="flex items-center gap-3">
-                  <i class="text-[1.3rem]! pi pi-cloud-upload"></i>
-                  <div class="flex flex-col">
-                    <span class="text-sm font-medium">{{ file.name }}</span>
-                    <span class="text-xs text-muted-color">{{ formatSize(file.size) }}</span>
-                  </div>
-                </div>
-                <Button type="button" iconOnly variant="text" severity="secondary" size="small" rounded @click="removeFileCallback(index)">
-                  <i class="text-[1.3rem]! pi pi-times"></i>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </template>
-        <template #empty>
-          <div class="flex flex-col items-center justify-center gap-3 py-8 cursor-pointer" @click="onChoose">
-            <i class="text-[2rem]! pi pi-cloud-upload"></i>
-            <div class="text-center">
-              <p class="text-lg font-medium mt-0 mb-1">Drop files here</p>
-              <p class="text-sm text-muted-color m-0">or click to browse</p>
-            </div>
-          </div>
-        </template>
-      </FileUpload>
+        <i class="text-[2rem]! pi pi-cloud-upload text-gray-400"></i>
+        <div class="text-center">
+          <p class="text-base font-medium mt-0 mb-1">把文件拖到这里</p>
+          <p class="text-xs text-muted-color m-0">
+            或点击选择 · 支持 {{ composer.ALLOWED_EXTENSIONS.join(' / ') }} · 单个最大 50MB
+          </p>
+          <!--
+            把去向说清楚。用户有权知道自己传的东西会不会被别人看到 ——
+            改动前这些文件确实进了所有人共享的检索库，界面上却没有任何提示。
+          -->
+          <p class="text-[0.68rem] text-muted-color mt-2 mb-0">
+            仅用于本次对话，不会进入公共知识库
+          </p>
+        </div>
+      </div>
 
       <!--
-        解析进度。与上传进度是两件事：上传条走完只说明文件传到服务器了，
-        解析（Docling + 向量化）还要几分钟，在后台队列里排队进行。
-        没有这块的话用户会以为上传完就结束了。
+        本次要发送的附件。选中即开始上传，所以这一段从选择文件那一刻
+        就有内容 —— 不再有「选了但没点 Upload」这个让人踩坑的中间态。
       -->
-      <div v-if="trackedTasks.length" class="flex flex-col gap-2 mt-4">
-        <span class="text-sm text-muted-color">解析进度</span>
+      <div v-if="composer.hasAttachments" class="flex flex-col gap-2 mt-4">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-muted-color">
+            随下一条消息发送（{{ composer.attachments.length }}/{{ composer.MAX_ATTACHMENTS }}）
+          </span>
+          <Button variant="text" size="small" severity="danger" @click="composer.clear()">
+            全部移除
+          </Button>
+        </div>
+        <AttachmentChip
+          v-for="item of composer.attachments"
+          :key="item.id"
+          class="max-w-none!"
+          :name="item.name"
+          :size="item.size"
+          :status="item.status"
+          :progress="item.progress"
+          :error-message="item.error_message"
+          removable
+          @remove="composer.remove(item.id)"
+        />
+      </div>
+
+      <!--
+        历史解析进度。与上传进度是两件事：上传条走完只说明文件传到服务器了，
+        解析（Docling + 向量化）还要几分钟，在后台队列里排队进行。
+      -->
+      <div v-if="historyTasks.length" class="flex flex-col gap-2 mt-4">
+        <span class="text-sm text-muted-color">此前的解析任务</span>
         <div
-            v-for="task of trackedTasks"
-            :key="task.task_id"
-            class="flex items-center justify-between p-3 rounded-lg bg-surface-50 dark:bg-surface-800"
+          v-for="task of historyTasks"
+          :key="task.task_id"
+          class="flex items-center justify-between gap-2 p-3 rounded-lg bg-surface-50 dark:bg-surface-800"
         >
           <div class="flex flex-col min-w-0">
-            <span class="text-sm font-medium truncate">{{ task.file_name }}</span>
-            <span class="text-xs text-muted-color">{{ statusLabel(task) }}</span>
+            <span class="text-sm font-medium truncate" :title="task.file_name">
+              {{ task.file_name }}
+            </span>
+            <span class="text-xs text-muted-color truncate">{{ statusLabel(task) }}</span>
           </div>
           <Button
-              v-if="isTerminal(task)"
-              type="button" iconOnly variant="text" severity="secondary"
-              size="small" rounded
-              @click="ingestStore.dismiss(task.task_id)"
+            v-if="isTerminal(task)"
+            type="button" iconOnly variant="text" severity="secondary"
+            size="small" rounded
+            :aria-label="`不再显示 ${task.file_name}`"
+            @click="ingestStore.dismiss(task.task_id)"
           >
             <i class="text-[1.1rem]! pi pi-times"></i>
           </Button>
-          <i v-else class="pi pi-spin pi-spinner text-muted-color"></i>
+          <i v-else class="pi pi-spin pi-spinner text-muted-color" aria-hidden="true"></i>
         </div>
       </div>
     </div>

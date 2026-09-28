@@ -117,6 +117,7 @@ defineExpose({ scrollToBottom })
         <HumanMessage
             v-if="item.role === 'HumanMessage'"
             :content="item.content"
+            :attachments="item.attachments"
             :is-first="index === 0"
         />
         <AiMessage

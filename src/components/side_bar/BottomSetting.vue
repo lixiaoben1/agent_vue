@@ -1,8 +1,12 @@
 <script setup lang="ts">
-
-
+import { ref } from 'vue'
 import {useVerifyStore} from "@/stores/verify.ts";
+import {useRouter} from "vue-router";
+import SettingsDialog from './SettingsDialog.vue'
+
 const veryfyStore = useVerifyStore();
+const router = useRouter();
+const showSettings = ref(false)
 
 /**
  * 未登录时点这里重新弹登录框。
@@ -16,6 +20,13 @@ const handleIdentityClick = () => {
     veryfyStore.requireVerify()
   }
 }
+
+/**
+ * 打开设置对话框
+ */
+const handleSettingsClick = () => {
+  showSettings.value = true
+}
 </script>
 
 <template>
@@ -27,13 +38,33 @@ const handleIdentityClick = () => {
   >
     <div class="">{{veryfyStore.username}}</div>
     <div class="text-[0.95rem] text-gray-500">
-      {{ veryfyStore.isVerified ? '免费版' : '点此登录' }}
+      {{ veryfyStore.isVerified ? (veryfyStore.isAdmin ? '管理员' : '免费版') : '点此登录' }}
     </div>
   </div>
-  <div class="mr-5 rounded-full w-10 h-10 hover:bg-gray-200 flex items-center justify-center">
-    <i class="text-[1.3rem]! pi pi-cog"></i>
+  <div class="flex flex-row items-center mr-5">
+    <!--
+      管理入口只对管理员显示。这只是「不给非管理员看一个点不动的按钮」，
+      不是权限 —— 页面本身谁都能直接输 /admin 打开，真正的拦截在后端。
+    -->
+    <div
+      v-if="veryfyStore.isAdmin"
+      @click="router.push('/admin')"
+      title="管理看板"
+      class="rounded-full w-10 h-10 hover:bg-gray-200 flex items-center justify-center cursor-pointer"
+    >
+      <i class="text-[1.3rem]! pi pi-chart-bar"></i>
+    </div>
+    <div
+      @click="handleSettingsClick"
+      title="设置"
+      class="rounded-full w-10 h-10 hover:bg-gray-200 flex items-center justify-center cursor-pointer"
+    >
+      <i class="text-[1.3rem]! pi pi-cog"></i>
+    </div>
   </div>
 
+  <!-- 设置对话框 -->
+  <SettingsDialog v-model:visible="showSettings" />
 </div>
 </template>
 

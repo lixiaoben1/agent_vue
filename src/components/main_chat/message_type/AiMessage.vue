@@ -4,7 +4,9 @@
 import 'markstream-vue/index.css'
 import MarkdownRender from 'markstream-vue'
 import { computed, onMounted, onUnmounted, ref, watch } from "vue"
+import { useSettingsStore } from '@/stores/settings_store'
 
+const settingsStore = useSettingsStore()
 const isOpen = ref(false)
 const isStreaming = computed(() => props.status === 'streaming')
 
@@ -38,8 +40,12 @@ watch(
 </script>
 
 <template>
-    <div class="flex flex-col justify-between py-2 text-black">
-      <details :open="isOpen" class="group/reasoning">
+    <div class="flex flex-col justify-between py-2 text-black" :style="{ fontSize: 'var(--message-font-size, 14px)' }">
+      <!--
+        showReasoning 控制整个 details 块的显示。
+        reasoning 为空时也不显示 —— 有些模型不输出推理内容
+      -->
+      <details v-if="settingsStore.showReasoning && reasoningText" :open="isOpen" class="group/reasoning">
         <summary class="cursor-pointer select-none text-sm text-gray-500 hover:text-gray-700 transition-colors list-none flex items-center gap-1">
           <i class="pi pi-chevron-right transition-transform duration-200 group-open/reasoning:rotate-90 text-sm"></i>
           查看思考过程...
