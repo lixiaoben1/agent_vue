@@ -42,7 +42,7 @@ export default defineConfig({
       // 地址从环境变量取，默认本机 —— 后端跑在另一台机器时不用改代码，
       // 建 .env.local 写 VITE_API_TARGET=http://<ip>:8080 即可。
       '/api': {
-        target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8080',
+        target: process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8006',
         changeOrigin: true,
       }
     }
